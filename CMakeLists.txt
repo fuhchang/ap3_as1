@@ -9,6 +9,7 @@ set(SOURCE_FILES
     tldlist.c
     tldlist.h
     tldmonitor.c
-    small.txt)
+    small.txt
+    large.txt)
 
 add_executable(aph_ex1 ${SOURCE_FILES})

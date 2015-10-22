@@ -5,6 +5,7 @@
       <sourceFolder url="file://$MODULE_DIR$/CMakeLists.txt" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/date.c" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/date.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/large.txt" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/small.txt" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/tldlist.c" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/tldlist.h" isTestSource="false" />

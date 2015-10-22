@@ -9,7 +9,7 @@
 
 static TLDNode *addnode(TLDList *tld, char *tldnodestr, TLDNode *node);
 static TLDNode *newnode(char *tldnodestr);
-static void iterAddr(TLDIterator *iter, TLDNode *node, int *i);
+static void addIter(TLDIterator *iter, TLDNode *node, int *i);
 
 static int getheight(TLDNode *node);
 static int getDiff(TLDNode *node);
@@ -20,7 +20,7 @@ static TLDNode *leftRightRotation(TLDNode *node);
 static TLDNode *balance(TLDNode *node);
 
 
-struct tldlist
+typedef struct tldlist
 {
     TLDNode *root;
     Date *begin;
@@ -28,25 +28,25 @@ struct tldlist
 
     long count;
     long size;
-};
+}TLDList;
 
-struct tldnode
+typedef struct tldnode
 {
     TLDNode *leftChild;
     TLDNode *rightChild;
 
     char *tldnodestr;
     long count;
-};
+}TLDNode;
 
-struct tlditerator
+typedef struct tlditerator
 {
     TLDList *tld;
     TLDNode **next;
 
     int i;
     long size;
-};
+}TLDIterator;
 
 static TLDNode *newnode(char *tldnodestr);
 
@@ -77,13 +77,13 @@ int tldlist_add(TLDList *tld, char *hostname, Date *d)
             break;
         }
     }
-    char *temp = hostname+counter+1;
-    int hostlen = strlen(temp);
+    char *tldTemp = hostname+counter+1;
+    int hostlen = strlen(tldTemp);
     char *tldstr = (char *)malloc((hostlen + 1));
     tldstr[hostlen] = '\0'; // make sure there is a null end
     
     for(i=0;i<hostlen;i++){
-        tldstr[i] = temp[i];
+        tldstr[i] = tldTemp[i];
     }
     tld->root = addnode(tld, tldstr, tld->root);
     tld->count++;
@@ -101,14 +101,14 @@ static TLDNode *addnode(TLDList *tld, char *tldnodestr, TLDNode *node)
 
         return node;
     }
-    else if(strcmp(tldnodestr, node->tldnodestr) > 0)
-    {
-        node->rightChild = addnode(tld, tldnodestr, node->rightChild);
-        node = balance(node);
-    }
     else if(strcmp(tldnodestr, node->tldnodestr) < 0)
     {
         node->leftChild = addnode(tld, tldnodestr, node->leftChild);
+        node = balance(node);
+    }
+    else if(strcmp(tldnodestr, node->tldnodestr) > 0)
+    {
+        node->rightChild = addnode(tld, tldnodestr, node->rightChild);
         node = balance(node);
     }
     else
@@ -148,22 +148,21 @@ TLDIterator *tldlist_iter_create(TLDList *tld)
         }
 
         int i = 0;
-        iterAddr(iter, iter->tld->root, &i);
+        addIter(iter, iter->tld->root, &i);
 
         return iter;        
     }
 }
 
-//static iter addr
-static void iterAddr(TLDIterator *iter, TLDNode *node, int *i)
+static void addIter(TLDIterator *iter, TLDNode *node, int *i)
 {
     if(node->leftChild)
-        iterAddr(iter, node->leftChild, i);
+        addIter(iter, node->leftChild, i);
 
     *(iter->next + (*i)++) = node;
 
     if(node->rightChild)
-        iterAddr(iter, node->rightChild, i);
+        addIter(iter, node->rightChild, i);
 }
 
 TLDNode *tldlist_iter_next(TLDIterator *iter)
@@ -172,18 +171,15 @@ TLDNode *tldlist_iter_next(TLDIterator *iter)
     {
         return NULL;
     }
-
     return *(iter->next + iter->i++);
 }
 
 void tldlist_iter_destroy(TLDIterator *iter)
 {
-    int i = 0;
-    while(i < iter->size)
-    {
+    int i;
+    for(i=0;i<iter->size;i++){
         free(iter->next[i]->tldnodestr);
         free(iter->next[i]);
-        i++;
     }
         free(iter->next);
         free(iter);
@@ -224,33 +220,29 @@ void tldlist_destroy(TLDList *tld)
 {
     free(tld);
 }
-
-//static getheight
-int getheight(TLDNode *node)
+static int getheight(TLDNode *node)
 {
-    int ht = 0;
+    int height = 0;
     int leftTree;
     int rightTree;
-    int last;
+    int lastChild;
     if(node == NULL){
         return 0;
     }else{
         leftTree = getheight(node->leftChild);
         rightTree = getheight(node->rightChild);
-        if (leftTree > rightTree)
-        {
-            last = leftTree;
+        if(rightTree > leftTree){
+            lastChild = rightTree;
+        }else{
+            lastChild = leftTree;
         }
-        else
-        {
-            last = rightTree;
-        }
-        ht= 1+last;
+
+        height= 1+lastChild;
     }
-    return ht;
+    return height;
 }
 
-int getDiff(TLDNode *node)
+static int getDiff(TLDNode *node)
 {
     int diff;
     int leftTree;
@@ -263,63 +255,55 @@ int getDiff(TLDNode *node)
     return diff;
 }
 
-TLDNode *rightRightRotation(TLDNode *node)
+static TLDNode *rightRightRotation(TLDNode *node)
 {
-    TLDNode *temp;
-    temp = node->rightChild;
-    node->rightChild = temp->leftChild;
-    temp->leftChild = node;
-    return temp;
+    TLDNode *tldTemp;
+    tldTemp = node->rightChild;
+    node->rightChild = tldTemp->leftChild;
+    tldTemp->leftChild = node;
+    return tldTemp;
 }
 
-TLDNode *rightLeftRotation(TLDNode *node)
+static TLDNode *rightLeftRotation(TLDNode *node)
 {
-    TLDNode *temp;
-    temp =node->rightChild;
-    node->rightChild = leftLeftRotation(temp);
+    TLDNode *tldTemp;
+    tldTemp =node->rightChild;
+    node->rightChild = leftLeftRotation(tldTemp);
     return rightRightRotation(node);
 }
 
-TLDNode *leftLeftRotation(TLDNode *node)
+static TLDNode *leftLeftRotation(TLDNode *node)
 {
-    TLDNode *temp;
-    temp = node->leftChild;
-    node->leftChild = temp->rightChild;
-    temp->rightChild = node;
-    return temp;
+    TLDNode *tldTemp;
+    tldTemp = node->leftChild;
+    node->leftChild = tldTemp->rightChild;
+    tldTemp->rightChild = node;
+    return tldTemp;
 }
 
-TLDNode *leftRightRotation(TLDNode *node)
+static TLDNode *leftRightRotation(TLDNode *node)
 {
-    TLDNode *temp;
-    temp = node->leftChild;
-    node->leftChild = rightRightRotation(temp);
+    TLDNode *tldTemp;
+    tldTemp = node->leftChild;
+    node->leftChild = rightRightRotation(tldTemp);
     return leftLeftRotation(node);
 }
 
-TLDNode *balance(TLDNode *node)
+static TLDNode *balance(TLDNode *node)
 {
     int diff;
     diff = getDiff(node);
-    if (diff > 1)
-    {
-        if (getDiff(node->leftChild) > 0)
-        {
+    if (diff > 1) {
+        if (getDiff(node->leftChild) > 0){
             node = leftLeftRotation(node);
-        }
-        else
-        {
+        }else{
             node = leftRightRotation(node);
         }
-    }
-    else if (diff < -1)
+    }else if (diff < -1)
         {
-            if (getDiff(node->rightChild) > 0)
-            {
+            if (getDiff(node->rightChild) > 0) {
                 node = rightLeftRotation(node);
-            }
-            else
-            {
+            }else{
                 node = rightRightRotation(node);
             }
         }

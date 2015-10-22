@@ -84,13 +84,13 @@ int tldlist_add(TLDList *tld, char *hostname, Date *d) {
             break;
         }
     }
-    char *temp = hostname+counter+1;
-    int hostlen = strlen(temp);
+    char *tempTLDnode = hostname+counter+1;
+    int hostlen = strlen(tempTLDnode);
     tldstr = (char *)malloc((hostlen + 1));
     tldstr[hostlen] = '\0'; // make sure there is a null end
     
     for(i=0;i<hostlen;i++){
-        tldstr[i] = temp[i];
+        tldstr[i] = tempTLDnode[i];
     }
     tld->root = addnode(tld, tldstr, tld->root);
     tld->count++;
@@ -285,35 +285,35 @@ int getDiff(TLDNode *node)
 
 TLDNode *rightRightRotation(TLDNode *node)
 {
-    TLDNode *temp;
-    temp = node->rightChild;
-    node->rightChild = temp->leftChild;
-    temp->leftChild = node;
-    return temp;
+    TLDNode *tempTLDnode;
+    tempTLDnode = node->rightChild;
+    node->rightChild = tempTLDnode->leftChild;
+    tempTLDnode->leftChild = node;
+    return tempTLDnode;
 }
 
 TLDNode *rightLeftRotation(TLDNode *node)
 {
-    TLDNode *temp;
-    temp =node->rightChild;
-    node->rightChild = leftLeftRotation(temp);
+    TLDNode *tempTLDnode;
+    tempTLDnode =node->rightChild;
+    node->rightChild = leftLeftRotation(tempTLDnode);
     return rightRightRotation(node);
 }
 
 TLDNode *leftLeftRotation(TLDNode *node)
 {
-    TLDNode *temp;
-    temp = node->leftChild;
-    node->leftChild = temp->rightChild;
-    temp->rightChild = node;
-    return temp;
+    TLDNode *tempTLDnode;
+    tempTLDnode = node->leftChild;
+    node->leftChild = tempTLDnode->rightChild;
+    tempTLDnode->rightChild = node;
+    return tempTLDnode;
 }
 
 TLDNode *leftRightRotation(TLDNode *node)
 {
-    TLDNode *temp;
-    temp = node->leftChild;
-    node->leftChild = rightRightRotation(temp);
+    TLDNode *tempTLDnode;
+    tempTLDnode = node->leftChild;
+    node->leftChild = rightRightRotation(tempTLDnode);
     return leftLeftRotation(node);
 }
 

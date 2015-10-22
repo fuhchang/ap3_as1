@@ -84,7 +84,8 @@ Date *date_duplicate(Date *d){
 	Date *datePtr = (Date *)malloc(sizeof(*d));
 	
 	if(datePtr  != NULL){
-		return memcpy(datePtr,d,sizeof(*d));
+		datePtr = d;
+		return datePtr;
 	}else{
 		date_destroy(datePtr);
 		return NULL;
