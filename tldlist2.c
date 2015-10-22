@@ -72,7 +72,7 @@ int tldlist_add(TLDList *tld, char *hostname, Date *d){
 }
 
 TLDNode *addTldNode(TLDList *tld, char *currentNode, TLDNode *node){
-	i
+
 }
 /*
  * tldlist_count returns the number of successful tldlist_add() calls since

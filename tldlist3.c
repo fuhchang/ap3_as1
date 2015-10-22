@@ -5,17 +5,17 @@
 #include <string.h>
 #include <ctype.h>
 
-TLDNode *addnode(TLDList *tld, char *tldnodestr, TLDNode *node);
-TLDNode *newnode(char *tldnodestr);
-void additer(TLDIterator *iter, TLDNode *node, int *i);
+static TLDNode *addnode(TLDList *tld, char *tldnodestr, TLDNode *node);
+static TLDNode *newnode(char *tldnodestr);
+static void additer(TLDIterator *iter, TLDNode *node, int *i);
 
-int getheight(TLDNode *node);
-int getDiff(TLDNode *node);
-TLDNode *rightRightRotation(TLDNode *node);
-TLDNode *rightLeftRotation(TLDNode *node);
-TLDNode *leftLeftRotation(TLDNode *node);
-TLDNode *leftRightRotation(TLDNode *node);
-TLDNode *balance(TLDNode *node);
+static int getheight(TLDNode *node);
+static int getDiff(TLDNode *node);
+static TLDNode *rightRightRotation(TLDNode *node);
+static TLDNode *rightLeftRotation(TLDNode *node);
+static TLDNode *leftLeftRotation(TLDNode *node);
+static TLDNode *leftRightRotation(TLDNode *node);
+static TLDNode *balance(TLDNode *node);
 char *tldstr = NULL;
 TLDNode *node = NULL;
 
@@ -140,39 +140,41 @@ long tldlist_count(TLDList *tld)
 TLDIterator *tldlist_iter_create(TLDList *tld) {
     TLDIterator *iter = (TLDIterator *)malloc(sizeof(TLDIterator));
     
-    if (iter == NULL)
+    if (iter != NULL)
     {
-        free(iter);
-        return NULL;
-    }
-    else {
         iter->tld = tld;
         iter->size = tld->size;
         iter->i = 0;
         //memory leak location
         iter->next = (TLDNode **)malloc(sizeof(TLDNode *) * iter->size);
         if (iter->next == NULL)
-        {
+        {   
             tldlist_iter_destroy(iter);
             return NULL;
+        }else{
+               int i = 0;
+                additer(iter, iter->tld->root, &i);
+                return iter;
         }
-        
-        int i = 0;
-        additer(iter, iter->tld->root, &i);
-        return iter;
+    }
+    else {
+        free(iter);
+        return NULL;
     }
 }
 
 void additer(TLDIterator *iter, TLDNode *node, int *i)
 {
     
-    if (node->leftChild)
+    if (node->leftChild){
         additer(iter, node->leftChild, i);
+    }
     
     *(iter->next + (*i)++) = node;
     
-    if (node->rightChild)
+    if (node->rightChild){
         additer(iter, node->rightChild, i);
+    }
 }
 /*
  * tldlist_iter_next returns the next element in the list; returns a pointer
@@ -186,19 +188,6 @@ TLDNode *tldlist_iter_next(TLDIterator *iter)
     return *(iter->next + iter->i++);
 }
 
-/*
- * tldlist_iter_destroy destroys the iterator specified by `iter'
- */
-void tldlist_iter_destroy(TLDIterator *iter) {
-
-int i;
-for(i=0;i < iter->size; i++){
-    free(iter->next[i]->tldnodestr);
-    free(iter->next[i]);
-}
-    free(iter->next);
-    free(iter);
-}
 /*
  * tldnode_tldname returns the tld associated with the TLDNode
  */
@@ -218,19 +207,19 @@ long tldnode_count(TLDNode *node)
 TLDNode *newnode(char *tldnodestr)
 {
     node = (TLDNode *)malloc(sizeof(TLDNode));
-    if (node == NULL)
+    if (node != NULL)
     {
-      free(node);
-      return NULL;
+        node->tldnodestr = tldnodestr;
+        node->leftChild = NULL;
+        node->rightChild = NULL;
+        node->count = 1;
+            
+        return node;
     }  
     else
     {
-    node->tldnodestr = tldnodestr;
-    node->leftChild = NULL;
-    node->rightChild = NULL;
-    node->count = 1;
-        
-    return node;
+      free(node);
+      return NULL;
     }
 }
 /*
@@ -240,11 +229,21 @@ TLDNode *newnode(char *tldnodestr)
  */
 void tldlist_destroy(TLDList *tld)
 {   
-    int i;
-    for(i=0;i<tld->size;i++){
-
-    }
     free(tld);   
+}
+
+/*
+ * tldlist_iter_destroy destroys the iterator specified by `iter'
+ */
+void tldlist_iter_destroy(TLDIterator *iter) {
+
+int i;
+for(i=0;i < iter->size; i++){
+    free(iter->next[i]->tldnodestr);
+    free(iter->next[i]);
+}
+    free(iter->next);
+    free(iter);
 }
 
 int getheight(TLDNode *node)
@@ -253,9 +252,9 @@ int getheight(TLDNode *node)
     int leftTree;
     int rightTree;
     int last;
-    
-    if (node != NULL)
-    {
+    if(node == NULL){
+        return 0;
+    }else{
         leftTree = getheight(node->leftChild);
         rightTree = getheight(node->rightChild);
         if (leftTree > rightTree)
