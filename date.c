@@ -18,6 +18,7 @@ typedef struct date{
  * `datestr' is expected to be of the form "dd/mm/yyyy"
  * returns pointer to Date structure if successful,
  *         NULL if not (syntax error)
+ *  add new checking for value of date (like if day is more than 30 and month is not more than 12
  */
 Date *date_create(char *datestr){
   	int len = strlen(datestr);
@@ -33,7 +34,7 @@ Date *date_create(char *datestr){
     			char str[2] = {datestr[i]};
     			int num = atoi(str);
     			if(i == 0){
-    				if(num <0 || num > 3){
+    				if(num <=0 || num > 3){
     					date_destroy(datePtr);
     					return NULL;
     				}
@@ -84,7 +85,8 @@ Date *date_duplicate(Date *d){
 	Date *datePtr = (Date *)malloc(sizeof(*d));
 	
 	if(datePtr  != NULL){
-		datePtr = d;
+		memcpy(datePtr,d, sizeof(Date));
+		free(d);
 		return datePtr;
 	}else{
 		date_destroy(datePtr);

@@ -1,346 +1,351 @@
-#include "tldlist.h"
-#include "date.h"
-#include <stdlib.h>
-#include <string.h>
 #include <stdio.h>
+#include "tldlist.h"
+#include <stdlib.h>
+#include "date.h"
+#include <string.h>
+#include <ctype.h>
+
+static TLDNode *addnode(TLDList *tld, char *tldnodestr, TLDNode *node);
+static void iter_adder(TLDIterator *iter, TLDNode *node, int *i);
+static int getheight(TLDNode *node);
+static int getDiff(TLDNode *node);
+static TLDNode *rightRightRotation(TLDNode *node);
+static TLDNode *rightLeftRotation(TLDNode *node);
+static TLDNode *leftLeftRotation(TLDNode *node);
+static TLDNode *leftRightRotation(TLDNode *node);
+static TLDNode *balance(TLDNode *node);
+
+typedef struct tldlist {
+	TLDNode *root;
+	Date *begin;
+	Date *end;
+	long count;
+	long size;
+}TLDList;
 
 
-struct tldlist{
-	TLDNode *mainnode;
-	Date *begindate;
-	Date *enddate;
-	char *tldname;
-	long totalsize;
-};
-struct tldnode{
-	TLDNode *leftchild;
-	TLDNode *rightchild;
-	char *tldstr;
-	long numberoftimes;
-};
-struct tlditerator{
+typedef struct tldnode {
+	TLDNode *leftChild;
+	TLDNode *rightChild;
+
+	char *tldnodestr;
+	long count;
+}TLDNode;
+
+
+typedef struct tlditerator {
 	TLDList *tld;
 
 	int i;
 	long size;
+	TLDNode **next;
+}TLDIterator;
 
-	TLDNode **nextnode;
-
-
-};
-static void placenodeiniterator(TLDNode *node, TLDIterator *tlditer, int *i);
-static TLDNode *rrr(TLDNode *node);
-static TLDNode *llr(TLDNode *node);
-static TLDNode *lrr(TLDNode *node);
-static TLDNode *rlr(TLDNode *node);
-static int getbalancefactor(TLDNode *node);
-static int getheight(TLDNode *node);
-static TLDNode *balancetree(TLDNode *node);
-static TLDNode *tldNodeCreate(TLDList *tld, char *tldname, TLDNode *nodecreate);
-static void moveintoNodes(char *tldname, TLDNode *node, TLDList *tld);
 /*
- * tldlist_create generates a list structure for storing 
-s against
- * top level domains (TLD
+ * tldlist_create generates a list structure for storing counts against
+ * top level domains (TLDs)
  *
  * creates a TLDList that is constrained to the `begin' and `end' Date's
  * returns a pointer to the list if successful, NULL if not
  */
-TLDList *tldlist_create(Date *begin, Date *end){
-	TLDList *createdlist = (TLDList *)malloc(sizeof(TLDList));
-	if(createdlist != NULL){
-		createdlist->mainnode = NULL;
-		createdlist->totalsize = 0;
-		createdlist->begindate = begin;
-		createdlist->enddate = end;
+TLDList *tldlist_create(Date *begin, Date *end)
+{
+	TLDList *tldlist = malloc(sizeof(TLDList));
+	if (tldlist != NULL)
+	{
+		tldlist->count = 0;
+		tldlist->size = 0;
+		tldlist->root = NULL;
+		tldlist->begin = begin;
+		tldlist->end = end;
 	}
-	else{
-		tldlist_destroy(createdlist);
-	}
-	return createdlist;
+
+	return tldlist;
 
 }
-
-/*
- * tldlist_destroy destroys the list structure in `tld'
- *
- * all heap allocated storage associated with the list is returned to the heap
- */
-void tldlist_destroy(TLDList *tld){
-	free(tld);
-}
-
 /*
  * tldlist_add adds the TLD contained in `hostname' to the tldlist if
  * `d' falls in the begin and end dates associated with the list;
  * returns 1 if the entry was counted, 0 if not
  */
-static void moveintoNodes(char *tldname, TLDNode *node, TLDList *tld){
-	if(node != NULL){
-		if(strcmp(tldname, node->tldstr) > 0 ) {
-			TLDNode *randomnode = tldNodeCreate(tld, tldname, node->rightchild);
-			printf("%s:%s\n", randomnode->tldstr, tldname);
-			node->rightchild = randomnode;
-			//printf("%s:%s\n", node->rightchild->tldstr, tldname);
-			balancetree(node);
-		}
-		else if(strcmp(tldname, node->tldstr) < 0){
-			TLDNode *randomnode = tldNodeCreate(tld, tldname, node->leftchild);
-			printf("%s:%s\n", randomnode->tldstr, tldname);
-			node->leftchild = randomnode;
-			//printf("%s:%s\n", node->leftchild->tldstr, tldname);
-			balancetree(node);
-		}
-		else{
-			free(tldname);
-			node->numberoftimes++;
-		}
-	}
-}
-int tldlist_add(TLDList *tld, char *hostname, Date *d){
-
-	if(date_compare(tld->begindate, d) > 0 || date_compare(tld->enddate, d) < 0){
-		//printf("%s\n", hostname);
+int tldlist_add(TLDList *tld, char *hostname, Date *d) {
+	// check if it's within the tld dates
+	if (date_compare(tld->begin, d) > 0 ||date_compare(tld->end, d) < 0)
 		return 0;
-	}
-
-
-	int i, count=0, counter=0;
-	for(i = ((strlen(hostname))); i >=0 ; i--){
+	int i , counter=0;
+	int len = strlen(hostname);
+	for(i=len;i>0;i--){
 		if(hostname[i] == '.'){
-			count = i;
+			counter=i;
 			break;
 		}
-		else{
-			counter++;
+	}
+	char *tempTLDnode = hostname+counter+1;
+	int hostlen = strlen(tempTLDnode);
+	char *tldstr = (char *)malloc((hostlen + 1));
+	tldstr[hostlen] = '\0'; // make sure there is a null end
+
+	for(i=0;i<hostlen;i++){
+		tldstr[i] = tempTLDnode[i];
+	}
+	tld->root = addnode(tld, tldstr, tld->root);
+	tld->count++;
+	return 1;
+}
+/*
+ * By using the taken in value of TLDList, char tldnodestr and TLDNode node to check if the node exists
+ * if not create a new know and add the detail to the node.
+ * else check the value of child and add it into the child node
+ * then call the balance method to rebalanced the tree.
+ * finally return node
+ */
+static TLDNode *addnode(TLDList *tld, char *tldnodestr, TLDNode *node) {
+
+	if(node == NULL)
+	{
+		TLDNode *node = (TLDNode *)malloc(sizeof(TLDNode));
+		if(node != NULL)
+		{
+			node->tldnodestr = tldnodestr;
+			node->leftChild = NULL;
+			node->rightChild = NULL;
+			node->count = 1;
+			tld->root = node;
+			tld->size++;
+		}
+		else {
+			free(node);
+		}
+		return node;
+	}else{
+		int cmp = strcmp(tldnodestr, node->tldnodestr);
+		if(cmp < 0)
+		{
+			node->leftChild = addnode(tld, tldnodestr, node->leftChild);
+			node = balance(node);
+		}
+		else if(cmp > 0)
+		{
+			node->rightChild = addnode(tld, tldnodestr, node->rightChild);
+			node = balance(node);
+		}
+		else
+		{
+			free(tldnodestr);
+			node->count++;
 		}
 	}
-	int lengthofstring = strlen(hostname+count+1);
-	char *tlddomainname = (char *)malloc(sizeof(lengthofstring+1));
-	tlddomainname = hostname+count+1;
-	//printf("%s\n", tlddomainname);
-	if(tld->mainnode == NULL){
-		tld->mainnode = tldNodeCreate(tld, tlddomainname, tld->mainnode);
-	}
-	else{
-		moveintoNodes(tlddomainname, tld->mainnode, tld);
-	}
 
-
-	//printf("%s\n", tld->mainnode->tldstr);
-	return 1;
-
+	return node;
 }
-static TLDNode *tldNodeCreate(TLDList *tld, char *tldname, TLDNode *nodecreate){
 
-	if(nodecreate == NULL) {
-		TLDNode *node = (TLDNode *) malloc(sizeof(TLDNode));
-		node->tldstr = tldname;
-		node->leftchild = NULL;
-		node->rightchild = NULL;
-		node->numberoftimes = 1;
-		tld->totalsize++;
-		nodecreate = node;
-		//printf("%s\n", nodecreate->tldstr);
-		return nodecreate;
-	}
-	return nodecreate;
-}
-/*void iteraddr(TLDIterator *iter, TLDNode *node, int *i){
-
-	
-	 if (node->leftchild){
-        	iteraddr(iter, node->leftchild, i);
-	 }
-    
-    	*(iter->nextnode + (*i)++) = node;
-    
-	if (node->rightchild){
-	        iteraddr(iter, node->rightchild, i);
-	}
-	
-
-}*/
 /*
  * tldlist_count returns the number of successful tldlist_add() calls since
  * the creation of the TLDList
  */
-long tldlist_count(TLDList *tld){
-	return tld->totalsize;
+long tldlist_count(TLDList *tld)
+{
+	return tld->count;
 }
-
 /*
  * tldlist_iter_create creates an iterator over the TLDList; returns a pointer
  * to the iterator if successful, NULL if not
  */
-TLDIterator *tldlist_iter_create(TLDList *tld){
+TLDIterator *tldlist_iter_create(TLDList *tld) {
+	TLDIterator *iter = (TLDIterator *)malloc(sizeof(TLDIterator));
 
-	TLDIterator *tlditer = (TLDIterator *)malloc(sizeof(TLDIterator));
-	if(tlditer != NULL){
-		tlditer->tld = tld;
-		tlditer->size = tld->totalsize;
-		tlditer->i = 0;
-		tlditer->nextnode = (TLDNode **)malloc(sizeof(TLDNode)* tlditer->size);
-		int i=0;
-		//int size = (int)tlditer->size;
-		if(tlditer->nextnode == NULL){
-			tldlist_iter_destroy(tlditer);
+	if (iter != NULL)
+	{
+		iter->tld = tld;
+		iter->size = tld->size;
+		iter->i = 0;
+		//memory leak location
+		iter->next = (TLDNode **)malloc(sizeof(TLDNode *) * iter->size);
+		if (iter->next == NULL)
+		{
+			tldlist_iter_destroy(iter);
 			return NULL;
+		}else{
+			int i = 0;
+			iter_adder(iter, iter->tld->root, &i);
+			return iter;
 		}
-		placenodeiniterator(tld->mainnode, tlditer, &i);
-
-		return tlditer;
 	}
-	else{
-		free(tlditer);
+	else {
+		free(iter);
 		return NULL;
 	}
 }
+/*
+ * by using the taken in value of iterator , tldnode and i(for counter)
+ * using as a recursive method to add the node into the iterator
+ */
+static void iter_adder(TLDIterator *iter, TLDNode *node, int *i)
+{
 
-static void placenodeiniterator(TLDNode *node, TLDIterator *tlditer,int *count1){
-	if(node != NULL){
-		if(node->rightchild){
-			placenodeiniterator(node->rightchild, tlditer, count1);
-		}
-		*(tlditer->nextnode + (*count1)++) = node;
+	if (node->leftChild){
+		iter_adder(iter, node->leftChild, i);
+	}
 
-		if(node->leftchild){
-			//count1--;
-			placenodeiniterator(node->leftchild, tlditer, count1);
-		}
+	*(iter->next + (*i)++) = node;
+
+	if (node->rightChild){
+		iter_adder(iter, node->rightChild, i);
 	}
 }
+
 /*
  * tldlist_iter_next returns the next element in the list; returns a pointer
  * to the TLDNode if successful, NULL if no more elements to return
  */
-TLDNode *tldlist_iter_next(TLDIterator *iter){
-
-	if (iter->i == iter->size){
+TLDNode *tldlist_iter_next(TLDIterator *iter)
+{
+	if (iter->i == iter->size)
 		return NULL;
-	}
-	return *(iter->nextnode + iter->i++);
 
-}
-
-/*
- * tldlist_iter_destroy destroys the iterator specified by `iter'
- */
-void tldlist_iter_destroy(TLDIterator *iter){
-	free(iter->nextnode);
-	free(iter);
+	return *(iter->next + iter->i++);
 }
 
 /*
  * tldnode_tldname returns the tld associated with the TLDNode
  */
-char *tldnode_tldname(TLDNode *node){
-	//printf("%s\n", node->tldstr);
-	return node->tldstr;
+char *tldnode_tldname(TLDNode *node)
+{
+	return node->tldnodestr;
 }
-
 /*
  * tldnode_count returns the number of times that a log entry for the
  * corresponding tld was added to the list
  */
-long tldnode_count(TLDNode *node){
-	printf("%d\n", (int)node->numberoftimes);
-	return node->numberoftimes;
+long tldnode_count(TLDNode *node)
+{
+	return node->count;
+}
+/*
+ * tldlist_destroy destroys the list structure in `tld'
+ *
+ * all heap allocated storage associated with the list is returned to the heap
+ */
+void tldlist_destroy(TLDList *tld)
+{
+	free(tld);
 }
 
+/*
+ * tldlist_iter_destroy destroys the iterator specified by `iter'
+ */
+void tldlist_iter_destroy(TLDIterator *iter) {
 
-static int getheight(TLDNode *node){
-	int height, left, right, prev;
-	height = 0;
-	if(node != NULL){
-		left = getheight(node->leftchild);
-		right = getheight(node->rightchild);
-		if(left > right){
-			prev = left;
-		}
-		else{
-			prev = right;
-		}
-		height =prev++;
+	int i;
+	for(i=0;i < iter->size; i++){
+		free(iter->next[i]->tldnodestr);
+		free(iter->next[i]);
 	}
-	//printf("%d\n", height);
-	return height;
+	free(iter->next);
+	free(iter);
 }
-static int getbalancefactor(TLDNode *node){
-	int bf, left, right;
-
-	left = getheight(node->leftchild);
-	right = getheight(node->rightchild);
-	bf = left-right;
-	return bf;
-}
-static TLDNode *llr(TLDNode *node){
-	TLDNode *tempnode;
-
-	tempnode = node->leftchild;
-
-	node->leftchild = tempnode->rightchild;
-
-	tempnode->rightchild = node;
-
-	return tempnode;
-}
-static TLDNode *rrr(TLDNode *node){
-	TLDNode *tempnode;
-
-	tempnode = node->rightchild;
-
-	node->rightchild = tempnode->leftchild;
-
-	tempnode->leftchild = node;
-
-	return tempnode;
-}
-static TLDNode *lrr(TLDNode *node){
-	TLDNode *tempnode;
-
-	tempnode = node->leftchild;
-
-
-	node->leftchild = rrr(tempnode);
-
-
-	return llr(node);
-}
-static TLDNode *rlr(TLDNode *node){
-	TLDNode *tempnode;
-	tempnode = node->rightchild;
-
-	node->rightchild = llr(tempnode);
-
-	return rrr(node);
-}
-static TLDNode *balancetree(TLDNode *node){
-
-	int balancefactor;
-	balancefactor = getbalancefactor(node);
-	if (balancefactor >= 2)
-	{
-		if (getbalancefactor(node->leftchild) >0)
+/*
+ * take in TLDNode and check through the height of the node like its has more left or right child
+ * and return the total of the child + itself as the current height
+ */
+static int getheight(TLDNode *node)
+{
+	int ht = 0;
+	int leftTree;
+	int rightTree;
+	int last;
+	if(node == NULL){
+		return 0;
+	}else{
+		leftTree = getheight(node->leftChild);
+		rightTree = getheight(node->rightChild);
+		if (leftTree > rightTree)
 		{
-			node = llr(node);
+			last = leftTree;
 		}
 		else
 		{
-			node = lrr(node);
+			last = rightTree;
 		}
+		ht= 1+last;
 	}
-	else if (balancefactor <= -2)
+	return ht;
+}
+/*
+ * get the integer different of the current node's left and right child and return the value
+ */
+static int getDiff(TLDNode *node)
+{
+	int diff;
+	int leftTree;
+	int rightTree;
+
+	leftTree = getheight(node->leftChild);
+	rightTree = getheight(node->rightChild);
+	diff = leftTree - rightTree;
+
+	return diff;
+}
+
+static TLDNode *rightRightRotation(TLDNode *node)
+{
+	TLDNode *tempTLDnode;
+	tempTLDnode = node->rightChild;
+	node->rightChild = tempTLDnode->leftChild;
+	tempTLDnode->leftChild = node;
+	return tempTLDnode;
+}
+
+static TLDNode *rightLeftRotation(TLDNode *node)
+{
+	TLDNode *tempTLDnode;
+	tempTLDnode =node->rightChild;
+	node->rightChild = leftLeftRotation(tempTLDnode);
+	return rightRightRotation(node);
+}
+
+static TLDNode *leftLeftRotation(TLDNode *node)
+{
+	TLDNode *tempTLDnode;
+	tempTLDnode = node->leftChild;
+	node->leftChild = tempTLDnode->rightChild;
+	tempTLDnode->rightChild = node;
+	return tempTLDnode;
+}
+
+static TLDNode *leftRightRotation(TLDNode *node)
+{
+	TLDNode *tempTLDnode;
+	tempTLDnode = node->leftChild;
+	node->leftChild = rightRightRotation(tempTLDnode);
+	return leftLeftRotation(node);
+}
+
+static TLDNode *balance(TLDNode *node)
+{
+	int diff;
+	diff = getDiff(node);
+	if (diff > 1)
 	{
-		if (getbalancefactor(node->rightchild) > 0)
+		if (getDiff(node->leftChild) > 0)
 		{
-			node = rlr(node);
+			node = leftLeftRotation(node);
 		}
 		else
 		{
-			node = rrr(node);
+			node = leftRightRotation(node);
+		}
+	}
+	else if (diff < -1)
+	{
+		if (getDiff(node->rightChild) > 0)
+		{
+			node = rightLeftRotation(node);
+		}
+		else
+		{
+			node = rightRightRotation(node);
 		}
 	}
 	return node;
 }
-
