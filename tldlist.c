@@ -23,31 +23,31 @@ static TLDNode *RLRotation(TLDNode *node);
 static TLDNode *LLRotation(TLDNode *node);
 static TLDNode *LRRotation(TLDNode *node);
 static TLDNode *balance(TLDNode *node);
-typedef struct tldlist {
+struct tldlist {
     TLDNode *root;
     Date *begin;
     Date *end;
     long count;
     long size;
-}TLDList;
+};
 
 
-typedef struct tldnode {
+struct tldnode {
     TLDNode *leftChild;
     TLDNode *rightChild;
 
     char *tldnodestr;
     long count;
-}TLDNode;
+};
 
 
-typedef struct tlditerator {
+struct tlditerator {
     TLDList *tld;
 
     int i;
     long size;
     TLDNode **next;
-}TLDIterator;
+};
 
 /*
  * tldlist_create generates a list structure for storing counts against

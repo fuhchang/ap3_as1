@@ -7,12 +7,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-typedef struct date{
+struct date{
     int day;
     int month;
     int year;
     char *dateArray;
-}Date;
+};
 /*
  * date_create creates a Date structure from `datestr`
  * `datestr' is expected to be of the form "dd/mm/yyyy"
