@@ -1,6 +1,12 @@
-//
-// Created by fuhchang on 10/7/15.
-//
+/*
+ * Loi Fuh Chang
+ * STI NO: 15AGC041S
+ * UOG NO: 2228133L
+ * I referenced from the following website:
+ * http://video.mit.edu/watch/introduction-to-algorithms-lecture-6-avl-trees-avl-sort-14062/
+ * http://anoopsmohan.blogspot.sg/2011/11/avl-tree-implementation-in-c.html
+ * lecture Note Abstract Data Types in C
+ */
 
 #include "date.h"
 #include <string.h>

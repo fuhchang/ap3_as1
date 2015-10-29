@@ -16,13 +16,14 @@
 
 static TLDNode *addnode(TLDList *tld, char *tldnodestr, TLDNode *node);
 static void iter_adder(TLDIterator *iter, TLDNode *node, int *i);
-static int getheight(TLDNode *node);
-static int getDiff(TLDNode *node);
+static int getTreeHeight(TLDNode *node);
+static int getNodeDiff(TLDNode *node);
 static TLDNode *RRRotation(TLDNode *node);
 static TLDNode *RLRotation(TLDNode *node);
 static TLDNode *LLRotation(TLDNode *node);
 static TLDNode *LRRotation(TLDNode *node);
-static TLDNode *balance(TLDNode *node);
+static TLDNode *rebalancingTree(TLDNode *node);
+
 struct tldlist {
     TLDNode *root;
     Date *begin;
@@ -46,7 +47,7 @@ struct tlditerator {
 
     int i;
     long size;
-    TLDNode **next;
+    TLDNode **nextNode;
 };
 
 /*
@@ -88,13 +89,17 @@ int tldlist_add(TLDList *tld, char *hostname, Date *d) {
             break;
         }
     }
-    char *tempTLDnode = hostname+counter+1;
-    int hostlen = strlen(tempTLDnode);
+    char *tempNode = hostname+counter+1;
+    int hostlen = strlen(tempNode);
     char *tldstr = (char *)malloc((hostlen + 1));
+    if(tldstr == NULL){
+        free(tldstr);
+        return 0;
+    }
     tldstr[hostlen] = '\0'; // make sure there is a null end
 
     for(i=0;i<hostlen;i++){
-        tldstr[i] = tempTLDnode[i];
+        tldstr[i] = tempNode[i];
     }
     tld->root = addnode(tld, tldstr, tld->root);
     tld->count++;
@@ -130,12 +135,12 @@ static TLDNode *addnode(TLDList *tld, char *tldnodestr, TLDNode *node) {
         if(cmp < 0)
         {
             node->leftChild = addnode(tld, tldnodestr, node->leftChild);
-            node = balance(node);
+            node = rebalancingTree(node);
         }
         else if(cmp > 0)
         {
             node->rightChild = addnode(tld, tldnodestr, node->rightChild);
-            node = balance(node);
+            node = rebalancingTree(node);
         }
         else
         {
@@ -167,9 +172,8 @@ TLDIterator *tldlist_iter_create(TLDList *tld) {
         iter->tld = tld;
         iter->size = tld->size;
         iter->i = 0;
-        //memory leak location
-        iter->next = (TLDNode **)malloc(sizeof(TLDNode *) * iter->size);
-        if (iter->next == NULL)
+        iter->nextNode = (TLDNode **)malloc(sizeof(TLDNode *) * iter->size);
+        if (iter->nextNode == NULL)
         {
             tldlist_iter_destroy(iter);
             return NULL;
@@ -195,7 +199,7 @@ static void iter_adder(TLDIterator *iter, TLDNode *node, int *i)
         iter_adder(iter, node->leftChild, i);
     }
 
-    *(iter->next + (*i)++) = node;
+    *(iter->nextNode + (*i)++) = node;
 
     if (node->rightChild){
         iter_adder(iter, node->rightChild, i);
@@ -211,7 +215,7 @@ TLDNode *tldlist_iter_next(TLDIterator *iter)
     if (iter->i == iter->size)
         return NULL;
 
-    return *(iter->next + iter->i++);
+    return *(iter->nextNode + iter->i++);
 }
 
 /*
@@ -246,29 +250,29 @@ void tldlist_iter_destroy(TLDIterator *iter) {
 
     int i;
     for(i=0;i < iter->size; i++){
-        free(iter->next[i]->tldnodestr);
-        free(iter->next[i]);
+        free(iter->nextNode[i]->tldnodestr);
+        free(iter->nextNode[i]);
     }
-    free(iter->next);
+    free(iter->nextNode);
     free(iter);
 }
 /*
  * take in TLDNode and check through the height of the node like its has more left or right child
  * and return the total of the child + itself as the current height
  */
-static int getheight(TLDNode *node)
+static int getTreeHeight(TLDNode *node)
 {
     int total = 1;
     if(node == NULL){
         return 0;
     }else{
-        if (getheight(node->leftChild) > getheight(node->rightChild))
+        if (getTreeHeight(node->leftChild) > getTreeHeight(node->rightChild))
         {
-            total = total + getheight(node->leftChild);
+            total = total + getTreeHeight(node->leftChild);
         }
         else
         {
-            total = total + getheight(node->rightChild);
+            total = total + getTreeHeight(node->rightChild);
         }
     }
     return total;
@@ -276,64 +280,67 @@ static int getheight(TLDNode *node)
 /*
  * get the integer different of the current node's left and right child and return the value
  */
-static int getDiff(TLDNode *node)
+static int getNodeDiff(TLDNode *node)
 {
-    return getheight(node->leftChild) - getheight(node->rightChild);
+    return getTreeHeight(node->leftChild) - getTreeHeight(node->rightChild);
 }
 /*
  * To rebalanced by changing the node of the tree from right to left by creating an temp node to store and switch the position
- * and return the node
+ * and return the balanced tldnode tree
  */
 static TLDNode *RRRotation(TLDNode *node)
 {
-    TLDNode *tempTLDnode;
-    tempTLDnode = node->rightChild;
-    node->rightChild = tempTLDnode->leftChild;
-    tempTLDnode->leftChild = node;
-    return tempTLDnode;
+    TLDNode *tempNode;
+    tempNode = node->rightChild;
+    node->rightChild = tempNode->leftChild;
+    tempNode->leftChild = node;
+    return tempNode;
 }
 /*
  * To rebalanced by changing the node of the tree using create an new temp node and use LLRotation method and RRRotation
+ * and return the balanced tldnode tree
  */
 static TLDNode *RLRotation(TLDNode *node)
 {
-    TLDNode *tempTLDnode;
-    tempTLDnode =node->rightChild;
-    node->rightChild = LLRotation(tempTLDnode);
+    TLDNode *tempNode;
+    tempNode =node->rightChild;
+    node->rightChild = LLRotation(tempNode);
     return RRRotation(node);
 }
 /*
  * To rebalanced by changing the node of the tree from left to right by creating an temp node to store and switch the position
- * and return the node
+ * and return the balanced tldnode tree
  */
 static TLDNode *LLRotation(TLDNode *node)
 {
-    TLDNode *tempTLDnode;
-    tempTLDnode = node->leftChild;
-    node->leftChild = tempTLDnode->rightChild;
-    tempTLDnode->rightChild = node;
-    return tempTLDnode;
+    TLDNode *tempNode;
+    tempNode = node->leftChild;
+    node->leftChild = tempNode->rightChild;
+    tempNode->rightChild = node;
+    return tempNode;
 }
 /*
  * To rebalanced by changing the node of the tree using create an new temp node and use RRRotation method and LLRotation
+ * and return the balanced tldnode tree
  */
 static TLDNode *LRRotation(TLDNode *node)
 {
-    TLDNode *tempTLDnode;
-    tempTLDnode = node->leftChild;
-    node->leftChild = RRRotation(tempTLDnode);
+    TLDNode *tempNode;
+    tempNode = node->leftChild;
+    node->leftChild = RRRotation(tempNode);
     return LLRotation(node);
 }
 /*
  * take in the node and check thought to see if the tree need to be balanced and by using the rotation method
+ * and return the balanced tldnode tree
  */
-static TLDNode *balance(TLDNode *node)
+static TLDNode *rebalancingTree(TLDNode *node)
 {
     int diff;
-    diff = getDiff(node);
+    diff = getNodeDiff(node);
     if (diff > 1)
     {
-        if (getDiff(node->leftChild) > 0)
+        if (getNodeDiff(node->leftChild) > 0)
         {
             node = LLRotation(node);
         }
@@ -344,7 +351,7 @@ static TLDNode *balance(TLDNode *node)
     }
     else if (diff < -1)
     {
-        if (getDiff(node->rightChild) > 0)
+        if (getNodeDiff(node->rightChild) > 0)
         {
             node = RLRotation(node);
         }

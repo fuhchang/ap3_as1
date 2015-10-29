@@ -1,3 +1,12 @@
+/*
+ * Loi Fuh Chang
+ * STI NO: 15AGC041S
+ * UOG NO: 2228133L
+ * I referenced from the following website:
+ * http://video.mit.edu/watch/introduction-to-algorithms-lecture-6-avl-trees-avl-sort-14062/
+ * http://anoopsmohan.blogspot.sg/2011/11/avl-tree-implementation-in-c.html
+ * lecture Note Abstract Data Types in C
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,11 +16,6 @@
 #include "tldlist.h"
 #include "date.h"
 
-
-/*
-  self defined function.
-  static to prevent misused of function in other file.
- */
 static TLDNode *addnode(TLDList *tld, char *tldnodestr, TLDNode *node);
 static TLDNode * makeNode(char * hostname);
 static TLDNode * findDeepestNode(TLDNode * node);
@@ -23,7 +27,6 @@ static TLDNode *leftLeftRotation(TLDNode *node);
 static TLDNode *leftRightRotation(TLDNode *node);
 static TLDNode *balance(TLDNode *node);
 
-//create the struct of tldlist, tldnode and iterator
 
 struct tldlist {
     TLDNode *root;
@@ -46,6 +49,13 @@ struct tlditerator {
     TLDNode * nodes;
 };
 
+/*
+ * tldlist_create generates a list structure for storing counts against
+ * top level domains (TLDs)
+ *
+ * creates a TLDList that is constrained to the `begin' and `end' Date's
+ * returns a pointer to the list if successful, NULL if not
+ */
 
 TLDList *tldlist_create(Date *begin, Date *end) {
     TLDList *tldlist = malloc(sizeof(TLDList));
@@ -80,8 +90,11 @@ void tldlist_destroy(TLDList *tld) {
 
 
 }
-
-//add into tldlist
+/*
+ * tldlist_add adds the TLD contained in `hostname' to the tldlist if
+ * `d' falls in the begin and end dates associated with the list;
+ * returns 1 if the entry was counted, 0 if not
+ */
 int tldlist_add(TLDList *tld, char *hostname, Date *d) {
     // check if it's within the tld dates
     if (date_compare(tld->begin, d) > 0 ||date_compare(tld->end, d) < 0)
@@ -97,11 +110,13 @@ int tldlist_add(TLDList *tld, char *hostname, Date *d) {
     char *tempTLDnode = hostname+counter+1;
     int hostlen = strlen(tempTLDnode);
     char *tldstr = (char *)malloc((hostlen + 1));
+
     tldstr[hostlen] = '\0'; // make sure there is a null end
 
     for(i=0;i<hostlen;i++){
         tldstr[i] = tempTLDnode[i];
     }
+
     tld->root = addnode(tld, tldstr, tld->root);
     tld->count++;
     return 1;

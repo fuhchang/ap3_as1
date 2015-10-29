@@ -1,0 +1,15 @@
+Name Loi Fuh Chang
+admin SIT NO: 15AGC041S
+admin UOG NO: 2228133L
+I referenced from the following website:
+ http://video.mit.edu/watch/introduction-to-algorithms-lecture-6-avl-trees-avl-sort-14062/
+ http://anoopsmohan.blogspot.sg/2011/11/avl-tree-implementation-in-c.html
+ lecture Note Abstract Data Types in C
+
+This is my own work other then iterator and avl is referenced from the following source i declared on top. 
+
+implmentation
+There is memory when i try to duplicate date for tldlist_create for begin and end date
+There will be segmentation fault if the date is after the last date from the text file
+My assignment has an avl implmentation
+
